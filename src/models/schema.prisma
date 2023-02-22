@@ -1,0 +1,173 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model detailTransaksi {
+  id           String    @id @default(uuid()) @db.Char(36)
+  id_transaksi String    @db.Char(36)
+  id_paket     String?   @db.Char(36)
+  quality      Float
+  keterangan   String?   @db.VarChar(255)
+  tb_paket     paket?    @relation(fields: [id_paket], references: [id], map: "tb_detail_transaksi_id_paket")
+  tb_transaksi transaksi @relation(fields: [id_transaksi], references: [id], onDelete: Cascade, map: "tb_detail_transaksi_id_transaksi")
+
+  @@index([id_paket], map: "id_paket")
+  @@index([id_transaksi, id_paket], map: "id_transaksi")
+  @@map("tb_detail_transaksi")
+}
+
+model member {
+  id            String                  @id @db.Char(15)
+  nama          String                  @unique @db.VarChar(100)
+  alamat        String                  @db.VarChar(255)
+  jenis_kelamin tb_member_jenis_kelamin
+  telepon       String                  @db.VarChar(15)
+  tb_transaksi  transaksi[]
+
+  @@map("tb_member")
+}
+
+model outlet {
+  id           String      @id @db.Char(15)
+  nama         String      @unique(map: "nama") @db.VarChar(50)
+  alamat       String      @unique(map: "alamat") @db.VarChar(255)
+  telepon      String      @unique(map: "telepon") @db.VarChar(15)
+  tb_paket     paket[]
+  tb_transaksi transaksi[]
+  tb_user      user[]
+
+  @@fulltext([nama, alamat, telepon])
+  @@map("tb_outlet")
+}
+
+model paket {
+  id                  String            @id @default(uuid()) @db.Char(36)
+  id_outlet           String            @db.Char(15)
+  jenis               tb_paket_jenis
+  nama_paket          String            @db.VarChar(100)
+  harga               BigInt
+  tb_detail_transaksi detailTransaksi[]
+  tb_outlet           outlet            @relation(fields: [id_outlet], references: [id], onDelete: Cascade, map: "tb_paket_id_outlet")
+
+  @@index([id_outlet], map: "id_outlet")
+  @@map("tb_paket")
+}
+
+model transaksi {
+  id                  String              @id @default(uuid()) @db.Char(36)
+  id_outlet           String?             @db.Char(15)
+  kode_invoice        String              @db.VarChar(100)
+  id_member           String?             @db.Char(15)
+  tanggal             DateTime?           @default(now()) @db.Timestamp(1)
+  batas_waktu         DateTime            @db.Timestamp(1)
+  biaya_tambahan      BigInt?
+  diskon              Float?
+  pajak               BigInt
+  status              tb_transaksi_status @default(antrian)
+  dibayar             Boolean?            @default(false)
+  id_user             String?             @db.Char(13)
+  log_transaksi       logTransaksi[]
+  tb_detail_transaksi detailTransaksi[]
+  tb_member           member?             @relation(fields: [id_member], references: [id], map: "tb_transaksi_id_member")
+  tb_outlet           outlet?             @relation(fields: [id_outlet], references: [id], map: "tb_transaksi_id_outlet")
+  tb_user             user?               @relation(fields: [id_user], references: [id], map: "tb_transaksi_id_user")
+
+  @@index([id_member], map: "id_member")
+  @@index([id_outlet, id_member, id_user], map: "id_outlet")
+  @@index([id_user], map: "id_user")
+  @@map("tb_transaksi")
+}
+
+model user {
+  id           String       @id @db.Char(13)
+  name         String       @unique @db.VarChar(50)
+  username     String       @unique @db.VarChar(50)
+  password     String       @db.VarChar(255)
+  id_outlet    String?      @db.Char(15)
+  role         tb_user_role
+  log_user     logUser[]
+  tb_transaksi transaksi[]
+  tb_outlet    outlet?      @relation(fields: [id_outlet], references: [id], map: "tb_user_id_outlet")
+  user_auth    userAuth?
+
+  @@index([id_outlet], map: "id_outlet")
+  @@fulltext([name, username])
+  @@map("tb_user")
+}
+
+model userAuth {
+  id            Int    @id @default(autoincrement())
+  id_user       String @unique @db.Char(13)
+  refresh_token String @unique @db.VarChar(255)
+  tb_user       user   @relation(fields: [id_user], references: [id], onDelete: Cascade, map: "user_auth_id_user")
+
+  @@index([id_user], map: "id_user")
+  @@map("user_auth")
+}
+
+model logUser {
+  id      Int      @id @default(autoincrement())
+  id_user String?  @db.Char(13)
+  action  action
+  dateNow DateTime @default(now()) @db.Timestamp(1)
+  tb_user user?    @relation(fields: [id_user], references: [id], map: "log_user_id_user")
+
+  @@index([id_user], map: "log_user_id_user")
+  @@map("log_user")
+}
+
+model logTransaksi {
+  id           Int        @id @default(autoincrement())
+  id_transaksi String?    @db.Char(36)
+  tanggal      DateTime   @default(now()) @db.Timestamp(1)
+  tb_transaksi transaksi? @relation(fields: [id_transaksi], references: [id], map: "log_transaksi_id_transaksi")
+
+  @@index([id_transaksi], map: "log_transaksi_id_transaksi")
+  @@map("log_transaksi")
+}
+
+enum tb_paket_jenis {
+  kiloan
+  selimut
+  bed_cover
+  kaos
+  lain
+}
+
+enum tb_member_jenis_kelamin {
+  laki_laki @map("laki-laki")
+  perempuan
+}
+
+enum tb_user_role {
+  admin
+  kasir
+  owner
+}
+
+enum tb_transaksi_status {
+  antrian
+  proses
+  selesai
+  diambil
+}
+
+enum action {
+  login
+  logout
+  menambah_paket
+  menambah_kasir
+  menambah_member
+  mengubah_paket
+  mengubah_kasir
+  mengubah_member
+  menghapus_paket
+  menghapus_kasir
+  menghapus_member
+}
