@@ -21,4 +21,4 @@ app.all('*', (req, res) => res.status(404).json({
   message: `method ${req.method} dengan endpoint ${req.path} tidak tersedia`
 }))
 
-app.listen(port, () => console.log(`App running on port:${port}`));
+app.listen(port, () => console.log(`Server running on port:${port}`));

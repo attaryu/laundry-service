@@ -3,21 +3,22 @@ import { nanoid } from 'nanoid';
 
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
-import { logOutlet, outlet } from '../models/index.js';
+import { logPelanggan, pelanggan } from '../models/index.js';
 
-export async function createOutletService(requestToken: string, body: any) {
+export async function createClientService(requestToken: string, body: any) {
   const token: any = jwt.decode(requestToken);
 
-  if (/manajer|kasir/.test(token.role)) {
+  if (/manajer|admin/.test(token.role)) {
     return {
       code: 401,
-      message: 'anda bukan admin',
+      message: 'anda bukan kasir',
     };
   }
 
   let propertyCorrection: any = propertyChecker(body, {
     nama: 'string',
     alamat: 'string',
+    jenis_kelamin: 'string',
     telepon: 'string',
   });
 
@@ -25,8 +26,15 @@ export async function createOutletService(requestToken: string, body: any) {
     return propertyCorrection;
   }
 
+  if (/[^laki_laki|perempuan]/.test(body.jenis_kelamin)) {
+    return {
+      code: 400,
+      message: `jenis kelamin ${body.jenis_kelamin} tidak valid`,
+    }
+  }
+
   try {
-    const existingOutlet: any | null = await outlet.findFirst({
+    const existingClient = await pelanggan.findFirst({
       where: {
         OR: [
           {
@@ -48,51 +56,48 @@ export async function createOutletService(requestToken: string, body: any) {
       },
     });
 
-    if (existingOutlet) {
-      if (body.nama === existingOutlet.nama) {
+    if (existingClient) {
+      if (body.nama === existingClient.nama) {
         return {
           code: 400,
-          message: `outlet dengan nama ${body.nama} sudah ada, silahkan coba nama lain`,
+          message: `pelanggan dengan nama ${body.nama} sudah ada, silahkan coba nama lain`,
         };
-      } else if (body.alamat === existingOutlet.alamat) {
+      } else if (body.telepon === existingClient.telepon) {
         return {
           code: 400,
-          message: `outlet dengan alamat ${body.alamat} sudah ada, silahkan coba alamat lain`,
-        };
-      } else if (body.telepon === existingOutlet.telepon) {
-        return {
-          code: 400,
-          message: `outlet dengan telepon ${body.telepon} sudah ada, silahkan coba telepon lain`,
+          message: `pelanggan dengan telepon ${body.telepon} sudah ada, silahkan coba telepon lain`,
         };
       }
     }
     
-    const payload = await outlet.create({
+    const payload = await pelanggan.create({
       data: {
         id: nanoid(10),
         nama: body.nama,
         alamat: body.alamat,
+        jenis_kelamin: body.jenis_kelamin,
         telepon: body.telepon,
       },
       select: {
         id: true,
         nama: true,
+        jenis_kelamin: true,
         alamat: true,
         telepon: true,
       },
     })
 
-    await logOutlet.create({
+    await logPelanggan.create({
       data: {
         id_user: token.id,
-        id_outlet: payload.id,
+        id_pelanggan: payload.id,
         action: 'tambah'
       }
     })
 
     return {
       code: 201,
-      message: `outlet baru berhasil ditambahkan`,
+      message: `pelanggan baru berhasil ditambahkan`,
       payload
     }
   } catch (error) {
@@ -102,8 +107,10 @@ export async function createOutletService(requestToken: string, body: any) {
   }
 }
 
-export async function getAllOutletService(query: any) {
-  let filter = {};
+export async function getAllClientService(query: any) {
+  const filter: any = {
+    AND: [],
+  };
 
   if (!query.page) {
     return {
@@ -112,8 +119,14 @@ export async function getAllOutletService(query: any) {
     }
   }
 
+  if (query.gender) {
+    filter.AND.push({
+      jenis_kelamin: query.gender,
+    });
+  }
+
   if (query.search) {
-    filter = {
+    filter.AND.push({
       OR: [
         {
           nama: {
@@ -131,24 +144,14 @@ export async function getAllOutletService(query: any) {
           },
         }
       ]
-    };
+    });
   }
 
   try {
     const perPage = 10;
     const page = Number(query.page);
-    const allData = await outlet.count();
+    const allData = await pelanggan.count();
     const allPage = Math.ceil(allData / perPage);
-    const payload = await outlet.findMany({
-      where: filter,
-      select: {
-        nama: true,
-        alamat: true,
-        telepon: true,
-      },
-      take: perPage,
-      skip: (perPage * page) - perPage
-    });
 
     if (query.page > allPage) {
       return {
@@ -156,6 +159,20 @@ export async function getAllOutletService(query: any) {
         message: `page ke-${query.page} tidak ada, hanya tersedia ${allPage} page`,
       }
     }
+
+    const payload = await pelanggan.findMany({
+      where: filter,
+      select: {
+        id: true,
+        nama: true,
+        alamat: true,
+        telepon: true,
+        jenis_kelamin: true,
+      },
+      take: perPage,
+      skip: (perPage * page) - perPage
+    });
+    
 
     return {
       code: 200,
@@ -172,55 +189,32 @@ export async function getAllOutletService(query: any) {
   }
 }
 
-export async function getSpecificOutletService(params: any) {
+export async function getSpecificClientService(params: any) {
   try {
-    const specificOutlet = await outlet.findUnique({
+    const specificClient = await pelanggan.findUnique({
       where: {
-        id: params.outletId,
+        id: params.customerId,
       },
       select: {
         id: true,
         nama: true,
-        alamat: true,
+        jenis_kelamin: true,
         telepon: true,
-        tb_user: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            role: true,
-          },
-        },
-        tb_transaksi: {
-          take: 5,
-          select: {
-            id: true,
-            total: true,
-            tanggal: true,
-            kode_invoice: true,
-          }
-        },
-        tb_paket: {
-          select: {
-            id: true,
-            jenis: true,
-            harga: true,
-          },
-        },
+        alamat: true,
       }
     });
 
-    if (!specificOutlet) {
+    if (!specificClient) {
       return {
         code: 404,
-        message: `outlet dengan id ${params.outletId} tidak ditemukan`,
+        message: `pelanggan dengan id ${params.customerId} tidak ditemukan`,
       };
     }
     
     return {
       code: 200,
       payload: {
-        ...specificOutlet,
+        ...specificClient,
       }
     }
   } catch (error) {
@@ -230,13 +224,13 @@ export async function getSpecificOutletService(params: any) {
   }
 }
 
-export async function editOutletService(requestToken: string, body: any, params: any) {
+export async function editClientService(requestToken: string, body: any, params: any) {
   const token: any = jwt.decode(requestToken);
 
-  if (/kasir/.test(token.role)) {
+  if (/manajer/.test(token.role)) {
     return {
       code: 401,
-      message: 'anda bukan admin atau manajer',
+      message: 'anda bukan kasir atau admin',
     };
   }
 
@@ -250,17 +244,24 @@ export async function editOutletService(requestToken: string, body: any, params:
     return propertyCorrection;
   }
 
+  if (!/laki_laki|perempuan/.test(body.jenis_kelamin)) {
+    return {
+      code: 400,
+      message: `jenis kelamin ${body.jenis_kelamin} tidak valid`,
+    }
+  }
+
   try {
-    const checkId = await outlet.findUnique({ where: { id: params.outletId } });
+    const checkId = await pelanggan.findUnique({ where: { id: params.customerId } });
 
     if (!checkId) {
       return {
         code: 404,
-        message: `outlet dengan id ${params.outletId} tidak terdaftar`,
+        message: `pelanggan dengan id ${params.customerId} tidak terdaftar`,
       }
     }
     
-    const existingOutlet: any | null = await outlet.findFirst({
+    const existingClient = await pelanggan.findFirst({
       where: {
         OR: [
           {
@@ -282,28 +283,28 @@ export async function editOutletService(requestToken: string, body: any, params:
       },
     });
 
-    if (existingOutlet) {
-      if (body.nama === existingOutlet.nama) {
+    if (existingClient && existingClient.id !== params.customerId) {
+      if (body.nama === existingClient.nama) {
         return {
           code: 400,
-          message: `outlet dengan nama ${body.nama} sudah ada, silahkan coba nama lain`,
+          message: `pelanggan dengan nama ${body.nama} sudah ada, silahkan coba nama lain`,
         };
-      } else if (body.alamat === existingOutlet.alamat) {
+      } else if (body.alamat === existingClient.alamat) {
         return {
           code: 400,
-          message: `outlet dengan alamat ${body.alamat} sudah ada, silahkan coba alamat lain`,
+          message: `pelanggan dengan alamat ${body.alamat} sudah ada, silahkan coba alamat lain`,
         };
-      } else if (body.telepon === existingOutlet.telepon) {
+      } else if (body.telepon === existingClient.telepon) {
         return {
           code: 400,
-          message: `outlet dengan telepon ${body.telepon} sudah ada, silahkan coba telepon lain`,
+          message: `pelanggan dengan telepon ${body.telepon} sudah ada, silahkan coba telepon lain`,
         };
       }
     }
     
-    const payload = await outlet.update({
+    const payload = await pelanggan.update({
       where: {
-        id: params.outletId,
+        id: params.customerId,
       },
       data: {
         nama: body.nama,
@@ -313,22 +314,23 @@ export async function editOutletService(requestToken: string, body: any, params:
       select: {
         id: true,
         nama: true,
-        alamat: true,
+        jenis_kelamin: true,
         telepon: true,
+        alamat: true,
       }
     })
 
-    await logOutlet.create({
+    await logPelanggan.create({
       data: {
         id_user: token.id,
-        id_outlet: params.outletId,
+        id_pelanggan: params.customerId,
         action: 'edit',
       }
     })
 
     return {
       code: 200,
-      message: `outlet dengan id ${params.outletId} sudah di update`,
+      message: `pelanggan dengan id ${params.customerId} sudah di update`,
       payload,
     }
   } catch (error) {
@@ -338,46 +340,46 @@ export async function editOutletService(requestToken: string, body: any, params:
   }
 }
 
-export async function deleteOutletService({ requestToken, params }: any) {
+export async function deleteClientService({ requestToken, params }: any) {
   const token: any = jwt.decode(requestToken);
 
-  if (/manajer|kasir/.test(token.role)) {
+  if (/manajer/.test(token.role)) {
     return {
       code: 401,
-      message: 'anda bukan admin',
+      message: 'anda bukan kasir atau admin',
     };
   }
 
   try {
-    const existingOutlet: any | null = await outlet.findUnique({
+    const existingClient: any | null = await pelanggan.findUnique({
       where: {
-        id: params.outletId,
+        id: params.customerId,
       },
       select: {
         id: true,
       },
     });
 
-    if (!existingOutlet) {
+    if (!existingClient) {
       return {
         code: 404,
-        message: `outlet dengan id ${params.outletId} tidak terdaftar`,
+        message: `pelanggan dengan id ${params.customerId} tidak terdaftar`,
       };
     }
 
-    await outlet.delete({ where: { id: params.outletId }});
+    await pelanggan.delete({ where: { id: params.customerId }});
 
-    await logOutlet.create({
+    await logPelanggan.create({
       data: {
         id_user: token.id,
-        id_outlet: params.outletId,
+        id_pelanggan: params.customerId,
         action: 'tambah'
       }
     })
 
     return {
       code: 200,
-      message: `outlet dengan id ${params.outletId} berhasil di hapus`,
+      message: `pelanggan dengan id ${params.customerId} berhasil di hapus`,
     }
   } catch (error) {
     console.error(error);

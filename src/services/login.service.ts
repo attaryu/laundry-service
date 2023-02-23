@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-import { user, userAuth } from '../models/index.js';
+import { logUser, user, userAuth } from '../models/index.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError, tokenError } from '../lib/responseReuse.js';
 
@@ -67,7 +67,14 @@ export async function loginService(body: any) {
         refresh_token: refreshToken,
         id_user: existingUser.id
       },
-    }); 
+    });
+
+    await logUser.create({
+      data: {
+        action: 'login',
+        id_user: existingUser.id,
+      }
+    })
   
     return {
       code: 201,
@@ -156,14 +163,14 @@ export async function logoutService(refreshToken: string) {
     console.error(error);
     
     if ('name' in error) {
-      return tokenError(error.name)
+      return tokenError(error.name);
     }
 
-    return serverError()
+    return serverError();
   }
   
   try {
-    await userAuth.delete({
+    const payload = await userAuth.delete({
       where: {
         refresh_token: refreshToken,
       },
@@ -171,15 +178,21 @@ export async function logoutService(refreshToken: string) {
         tb_user: {
           select: {
             id: true,
-            username: true,
           },
         },
       },
     });
 
+    await logUser.create({
+      data: {
+        action: 'logout',
+        id_user: payload.tb_user.id,
+      }
+    })
+
     return {
       code: 200,
-      message: 'logout berhasil'
+      message: 'logout berhasil',
     }
   } catch (message) {
     console.error(message);

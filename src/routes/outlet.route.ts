@@ -2,26 +2,24 @@ import express from 'express';
 
 import {
   createOutletController,
-  deleteMultipleOutletController,
   deleteOutletController,
   editOutletController,
   getAllOutletController,
-  getSpecificOutletController,
+  getSpecificOutletController
 } from '../controllers/outlet.controller.js';
 import { methodNotAllowed } from '../lib/handlerReuse.js';
 
-const registerRouter = express.Router();
+const outletRouter = express.Router();
 
-registerRouter.route('/outlet')
+outletRouter.route('/outlet')
   .post(createOutletController)
   .get(getAllOutletController)
-  .delete(deleteMultipleOutletController)
   .all(methodNotAllowed);
   
-  registerRouter.route('/outlet/:userId')
+outletRouter.route('/outlet/:outletId')
   .get(getSpecificOutletController)
   .put(editOutletController)
   .delete(deleteOutletController)
   .all(methodNotAllowed);
 
-export default registerRouter;
+export default outletRouter;

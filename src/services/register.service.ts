@@ -1,7 +1,7 @@
 import { hash } from 'bcrypt';
+import { nanoid } from 'nanoid';
 
-import { outlet, user } from '../models/index.js';
-import nanoid from '../lib/customNanoid.js';
+import { logUser, outlet, user } from '../models/index.js';
 import propertyChecker from '../lib/propertyChecker.js';
 
 export async function createNewAccountService(body: any) {
@@ -25,30 +25,36 @@ export async function createNewAccountService(body: any) {
     };
   }
 
-  if (!/admin|owner|kasir/.test(body.role)) {
+  if (/[^admin|manajer|kasir]/.test(body.role)) {
     return {
       code: 400,
       message: `role ${body.role} tidak tersedia`,
     }
   }
   
-  try {const existingOutlet: { id: string } | null = await outlet.findFirst({
-      where: { id: body.id_outlet },
-      select: { id: true },
+  try {
+    const existingOutlet: { id: string } | null = await outlet.findFirst({
+      where: {
+        id: body.id_outlet,
+      }
     })
   
     if (!existingOutlet) {
       return {
         code: 400,
-        message: `outlet tidak terdaftar`,
+        message: `outlet dengan id ${body.id_outlet} tidak terdaftar`,
       }
     }
   
     const existingUser: ExistingUser | null = await user.findFirst({
       where: {
         OR: [
-          { username: body.username },
-          { name: body.name },
+          {
+            username: body.username,
+          },
+          {
+            name: body.name,
+          },
         ]
       },
       select: {
@@ -61,19 +67,20 @@ export async function createNewAccountService(body: any) {
       if (existingUser.name === body.name) {
         return {
           code: 400,
-          message: `user dengan nama ${existingUser.name} sudah terdaftar!`,
+          message: `user dengan nama ${existingUser.name} sudah terdaftar`,
         };
       } else {
         return {
           code: 400,
-          message: `user dengan username ${existingUser.username} sudah terdaftar!`,
+          message: `user dengan username ${existingUser.username} sudah terdaftar`,
         };
       }
     }
 
+    const id = nanoid(10);
     const createdUser = await user.create({
       data: {
-        id: `user-${nanoid()}`,
+        id,
         password: await hash(body.password, 10),
         name: body.name,
         username: body.username,
@@ -82,6 +89,13 @@ export async function createNewAccountService(body: any) {
       },
       select: { id: true },
     });
+
+    await logUser.create({
+      data: {
+        action: 'daftar',
+        id_user: id,
+      }
+    })
     
     return {
       code: 201,

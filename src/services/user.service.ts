@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-import { outlet, user } from '../models/index.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
+import { logUser, outlet, user } from '../models/index.js';
 
 export async function getAllUserService(query: any) {
   try {
@@ -49,28 +49,30 @@ export async function getAllUserService(query: any) {
     
     const perPage = 10;
     const page = Number(query.page);
-    const allList = await user.count();
+    const allData = await user.count();
+    const allPage = Math.ceil(allData / perPage);
     const payload = await user.findMany({
       where: filter,
       select: {
+        id: true,
         name: true,
         username: true,
         role: true,
+        id_outlet: true,
         tb_outlet: {
           select: {
-            id: true,
             nama: true,
-          },
-        },
+          }
+        }
       },
       take: perPage,
       skip: (perPage * page) - perPage,
     });
 
-    if (payload.length === 0) {
+    if (query.page > allPage) {
       return {
-        code: 404,
-        message: 'data dengan hasil query tersebut tidak ada',
+        code: 400,
+        message: `page ke-${query.page} tidak ada, hanya tersedia ${allPage} page`,
       }
     }
 
@@ -79,8 +81,8 @@ export async function getAllUserService(query: any) {
       payload,
       page,
       per_page: perPage,
-      all_page: Math.ceil(allList / 10),
-      total: allList,
+      all_page: allPage,
+      total: allData,
     }
   } catch (error) {
     console.error(error);
@@ -104,8 +106,25 @@ export async function getSpecificUserService(params: any) {
           select: {
             id: true,
             nama: true,
+            alamat: true,
+            telepon: true,
           },
         },
+        tb_transaksi: {
+          take: 5,
+          select: {
+            id: true,
+            total: true,
+            kode_invoice: true,
+            tanggal: true
+          }
+        },
+        user_auth: {
+          select: {
+            id: true,
+            refresh_token: true,
+          }
+        }
       },
     });
 
@@ -130,7 +149,7 @@ export async function getSpecificUserService(params: any) {
 export async function editUserService({ requestToken, body, params }: any) {
   const token: any = jwt.decode(<string>requestToken);
 
-  if (token.role === 'kasir' || token.role === 'owner') {
+  if (/manajer|kasir/.test(token.role)) {
     return {
       code: 401,
       message: 'anda bukan admin',
@@ -152,7 +171,7 @@ export async function editUserService({ requestToken, body, params }: any) {
     return propertyCorrection;
   }
   
-  if (!/admin|owner|kasir/.test(body.role)) {
+  if (/[^manajer|kasir]/.test(body.role)) {
     return {
       code: 400,
       message: `role ${body.role} tidak tersedia`,
@@ -168,14 +187,14 @@ export async function editUserService({ requestToken, body, params }: any) {
         id: true,
       },
     });
-  
+
     if (!existingUser) {
       return {
         code: 404,
         message: `user dengan id ${params.userId} tidak terdaftar`,
       };
     }
-      
+
     const existingOutlet: { id: string } | null = await outlet.findUnique({
       where: {
         id: body.id_outlet,
@@ -205,7 +224,7 @@ export async function editUserService({ requestToken, body, params }: any) {
         password: await bcrypt.hash(body.password, 10),
       };
     }
-    
+
     const payload = await user.update({
       where: {
         id: params.userId,
@@ -214,56 +233,24 @@ export async function editUserService({ requestToken, body, params }: any) {
       select: {
         id: true,
         name: true,
+        username: true,
+        role: true,
+        id_outlet: true,
       },
     });
+
+    await logUser.create({
+      data: {
+        action: 'edit',
+        id_user: payload.id,
+      }
+    })
 
     return {
       code: 200,
       message: `user dengan id ${payload.id} sudah di update`,
+      payload,
     };
-  } catch (error) {
-    console.error(error);
-
-    return serverError();
-  }
-}
-
-export async function deleteMultipleUserService({ requestToken, body }: any) {
-  const token: any = jwt.decode(<string>requestToken);
-
-  if (token.role === 'kasir' || token.role === 'owner') {
-    return {
-      code: 401,
-      message: 'anda bukan admin',
-    };
-  }
-
-  const propertyCorrection: any = propertyChecker(body, { id: 'array' });
-
-  if (propertyCorrection) {
-    return propertyCorrection;
-  }
-
-  try {
-    const deletedUser = await user.deleteMany({
-      where: {
-        id: {
-          in: body.id,
-        }
-      }
-    })
-
-    if (!deletedUser.count) {
-      return {
-        code: 404,
-        message: `user dengan id ${body.id.join(', ')} tidak terdaftar`,
-      }
-    }
-
-    return {
-      code: 200,
-      message: `user dengan id ${body.id.join(', ')} berhasil dihapus`,
-    }
   } catch (error) {
     console.error(error);
 
@@ -274,7 +261,7 @@ export async function deleteMultipleUserService({ requestToken, body }: any) {
 export async function deleteUserService({ requestToken, params }: any) {
   const token: any = jwt.decode(<string>requestToken);
 
-  if (token.role === 'kasir' || token.role === 'owner') {
+  if (/manajer|kasir/.test(token.role)) {
     return {
       code: 401,
       message: 'anda bukan admin',
@@ -299,6 +286,12 @@ export async function deleteUserService({ requestToken, params }: any) {
     }
 
     await user.delete({ where: { id: params.userId }});
+    await logUser.create({
+      data: {
+        id_user: params.userId,
+        action: 'hapus',
+      }
+    })
     
     return {
       code: 200,

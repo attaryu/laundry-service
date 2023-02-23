@@ -4,11 +4,10 @@ import { serverErrorHandler } from '../lib/handlerReuse.js';
 import { verifyRequestToken } from '../lib/responseReuse.js';
 import {
   createOutletService,
-  deleleteOutletService,
-  deleteMultipleOutletService,
+  deleteOutletService,
   editOutletService,
   getAllOutletService,
-  getSpecificOutletService,
+  getSpecificOutletService
 } from '../services/outlet.service.js';
 
 export async function createOutletController(req: Request, res: Response) {
@@ -87,28 +86,6 @@ export async function editOutletController(req: Request, res: Response) {
   }
 }
 
-export async function deleteMultipleOutletController(req: Request, res: Response) {
-  const token = req.headers.authorization?.split(' ')[1];
-  const payloads = verifyRequestToken(token);
-
-  if (payloads) {
-    return res.status(payloads.code).json(payloads);
-  }
-  
-  try {
-    const payloads: any = await deleteMultipleOutletService({
-      requestToken: token,
-      body: req.body,
-    });
-    
-    return res.status(payloads.code).json(payloads);
-  } catch (error) {
-    console.error(error);
-  
-    return serverErrorHandler(res);
-  }  
-}
-
 export async function deleteOutletController(req: Request, res: Response) {
   const token = req.headers.authorization?.split(' ')[1];
   const payloads = verifyRequestToken(token);
@@ -118,7 +95,7 @@ export async function deleteOutletController(req: Request, res: Response) {
   }
   
   try {
-    const payloads: any = await deleleteOutletService({
+    const payloads: any = await deleteOutletService({
       requestToken: token,
       params: req.params,
     });

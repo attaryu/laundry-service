@@ -5,7 +5,7 @@ export const serverError = () => ({
   message: 'server error, coba lagi nanti',
 })
 
-export function tokenError(name: string, isRequest?: boolean) {
+export function tokenError(name: string, isRequest = false) {
   const typeToken = isRequest ? 'request' : 'refresh';
   
   switch (name) {

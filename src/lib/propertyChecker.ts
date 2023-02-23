@@ -1,6 +1,5 @@
 export default function propertyChecker(body: any, bodyStructure: bodyStructure) {
   const bodyStructureEntries = Object.entries(bodyStructure);
-  const bodyStructureKeys = Object.keys(bodyStructure);
   
   let propertyCorrection: {
     code: number,
@@ -38,7 +37,7 @@ export default function propertyChecker(body: any, bodyStructure: bodyStructure)
       } else {
         propertyCorrection = {
           code: 400,
-          message: `request harus berisi property: ${bodyStructureKeys.join(', ')}`,
+          message: `request harus berisi property: ${Object.keys(bodyStructure).join(', ')}`,
         };
       }
     });
