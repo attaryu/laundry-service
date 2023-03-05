@@ -593,9 +593,15 @@ export async function getSpecificTransactionService(params: getSpecificTransacti
             nama_paket: true,
             harga: true,
             jenis: true,
+          },
+        },
+        tb_user: {
+          select: {
+            id: true,
+            name: true,
           }
         }
-      }
+      },
     })
 
     if (!payload) {

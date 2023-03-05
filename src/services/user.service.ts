@@ -111,20 +111,17 @@ export async function getSpecificUserService(params: any) {
           },
         },
         tb_transaksi: {
-          take: 5,
+          orderBy: {
+            tanggal: 'desc'
+          },
+          take: 3,
           select: {
             id: true,
             total: true,
             kode_invoice: true,
-            tanggal: true
-          }
+            tanggal: true,
+          },
         },
-        user_auth: {
-          select: {
-            id: true,
-            refresh_token: true,
-          }
-        }
       },
     });
 

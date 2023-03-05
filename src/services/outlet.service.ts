@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import nanoid from '../lib/customNanoid.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
-import { logOutlet, outlet } from '../models/index.js';
+import { logOutlet, outlet, transaksi, user } from '../models/index.js';
 
 export async function createOutletService(requestToken: string, body: any) {
   const token: any = jwt.decode(requestToken);
@@ -174,7 +174,20 @@ export async function getAllOutletService(query: any) {
 
 export async function getSpecificOutletService(params: any) {
   try {
-    const specificOutlet = await outlet.findUnique({
+    const transactionCount = await transaksi.count({ where: { id_outlet: params.outletId } });
+    const cashierCount = await user.count({
+      where: {
+        id_outlet: params.outletId,
+        role: 'kasir',
+      }
+    });
+    const managerCount = await user.count({
+      where: {
+        id_outlet: params.outletId,
+        role: 'manajer',
+      }
+    });
+    const payload = await outlet.findUnique({
       where: {
         id: params.outletId,
       },
@@ -192,7 +205,10 @@ export async function getSpecificOutletService(params: any) {
           },
         },
         tb_transaksi: {
-          take: 5,
+          take: 3,
+          orderBy: {
+            tanggal: 'desc',
+          },
           select: {
             id: true,
             total: true,
@@ -210,7 +226,7 @@ export async function getSpecificOutletService(params: any) {
       }
     });
 
-    if (!specificOutlet) {
+    if (!payload) {
       return {
         code: 404,
         message: `outlet dengan id ${params.outletId} tidak ditemukan`,
@@ -220,7 +236,10 @@ export async function getSpecificOutletService(params: any) {
     return {
       code: 200,
       payload: {
-        ...specificOutlet,
+        ...payload,
+        jumlah_transaksi: transactionCount,
+        jumlah_kasir: cashierCount,
+        jumlah_manajer: managerCount,
       }
     }
   } catch (error) {

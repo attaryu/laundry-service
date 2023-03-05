@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import nanoid from '../lib/customNanoid.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
-import { logPelanggan, pelanggan } from '../models/index.js';
+import { logPelanggan, pelanggan, transaksi } from '../models/index.js';
 
 export async function createClientService(requestToken: string, body: any) {
   const token: any = jwt.decode(requestToken);
@@ -191,7 +191,8 @@ export async function getAllClientService(query: any) {
 
 export async function getSpecificClientService(params: any) {
   try {
-    const specificClient = await pelanggan.findUnique({
+    const transactionCount = await transaksi.count({ where: { id_pelanggan: params.customerId } });
+    const payload = await pelanggan.findUnique({
       where: {
         id: params.customerId,
       },
@@ -201,10 +202,22 @@ export async function getSpecificClientService(params: any) {
         jenis_kelamin: true,
         telepon: true,
         alamat: true,
+        transaksi: {
+          take: 3,
+          orderBy: {
+            tanggal: 'desc',
+          },
+          select: {
+            id: true,
+            kode_invoice: true,
+            total: true,
+            tanggal: true,
+          }
+        }
       }
     });
 
-    if (!specificClient) {
+    if (!payload) {
       return {
         code: 404,
         message: `pelanggan dengan id ${params.customerId} tidak ditemukan`,
@@ -214,7 +227,8 @@ export async function getSpecificClientService(params: any) {
     return {
       code: 200,
       payload: {
-        ...specificClient,
+        ...payload,
+        jumlah_transaksi: transactionCount,
       }
     }
   } catch (error) {
