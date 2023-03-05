@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { nanoid } from 'nanoid';
 
+import nanoid from '../lib/customNanoid.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
 import { logPelanggan, pelanggan } from '../models/index.js';
@@ -72,7 +72,7 @@ export async function createClientService(requestToken: string, body: any) {
     
     const payload = await pelanggan.create({
       data: {
-        id: nanoid(10),
+        id: nanoid(),
         nama: body.nama,
         alamat: body.alamat,
         jenis_kelamin: body.jenis_kelamin,

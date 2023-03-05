@@ -17,8 +17,6 @@ app.disable('x-powered-by');
 
 app.use(Router);
 
-app.all('*', (req, res) => res.status(404).json({
-  message: `method ${req.method} dengan endpoint ${req.path} tidak tersedia`
-}))
+app.all('*', (req, res) => res.status(404).send(`method ${req.method} dengan endpoint ${req.path} tidak tersedia`))
 
 app.listen(port, () => console.log(`Server running on port:${port}`));

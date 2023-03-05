@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { nanoid } from 'nanoid';
 
+import nanoid from '../lib/customNanoid.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
 import { logOutlet, outlet } from '../models/index.js';
@@ -69,7 +69,7 @@ export async function createOutletService(requestToken: string, body: any) {
     
     const payload = await outlet.create({
       data: {
-        id: nanoid(10),
+        id: nanoid(),
         nama: body.nama,
         alamat: body.alamat,
         telepon: body.telepon,

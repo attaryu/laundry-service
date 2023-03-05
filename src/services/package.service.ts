@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 
+import nanoid from '../lib/customNanoid.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
 import { paket } from '../models/index.js';
@@ -36,6 +37,7 @@ export async function createPackageService({ requestToken, body }: createPackage
   try {
     const existingPaket: any | null = await paket.findFirst({
       where: {
+        id_outlet: body.id_outlet,
         nama_paket: body.nama_paket,
       },
       select: {
@@ -51,7 +53,10 @@ export async function createPackageService({ requestToken, body }: createPackage
     }
 
     const payload = await paket.create({
-      data: body,
+      data: {
+        id: nanoid(),
+        ...body,
+      },
       select: {
         id: true,
         harga: true,

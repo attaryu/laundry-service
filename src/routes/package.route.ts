@@ -16,7 +16,7 @@ packageRouter.route('/package')
   .all(methodNotAllowed);
 
 packageRouter.route('/package/:paketId')
-  .post(editPackageController)
+  .put(editPackageController)
   .delete(deletePackageController)
   .all(methodNotAllowed);
 

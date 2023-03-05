@@ -1,8 +1,8 @@
 import { hash } from 'bcrypt';
-import { nanoid } from 'nanoid';
 
 import { logUser, outlet, user } from '../models/index.js';
 import propertyChecker from '../lib/propertyChecker.js';
+import nanoid from '../lib/customNanoid.js';
 
 export async function createNewAccountService(body: any) {
   let propertyCorrection: any = propertyChecker(body, {
@@ -77,10 +77,9 @@ export async function createNewAccountService(body: any) {
       }
     }
 
-    const id = nanoid(10);
     const createdUser = await user.create({
       data: {
-        id,
+        id: nanoid(),
         password: await hash(body.password, 10),
         name: body.name,
         username: body.username,
@@ -93,7 +92,7 @@ export async function createNewAccountService(body: any) {
     await logUser.create({
       data: {
         action: 'daftar',
-        id_user: id,
+        id_user: createdUser.id,
       }
     })
     
