@@ -153,8 +153,8 @@ model surat {
   judul       String         @db.VarChar(100)
   body        String         @db.VarChar(500)
   penting     Boolean        @default(false)
-  dibaca      Boolean        @default(false)
-  arsip       Boolean        @default(false)
+  dibaca      String         @db.LongText
+  arsip       String         @db.LongText
 
   tb_user user @relation(fields: [id_pengirim], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "surat_id_pengirim")
 
@@ -171,9 +171,10 @@ model logSurat {
 }
 
 enum penerima_surat {
-  admin
+  all
   manajer
   kasir
+  admin
 }
 
 enum tb_paket_jenis {

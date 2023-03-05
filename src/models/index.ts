@@ -15,4 +15,6 @@ export const {
   logOutlet,
   pelanggan,
   logPelanggan,
+  surat,
+  logSurat
 } = prisma;

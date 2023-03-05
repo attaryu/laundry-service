@@ -47,5 +47,5 @@ export default function propertyChecker(body: any, bodyStructure: bodyStructure)
 }
 
 interface bodyStructure {
-  [index: string]: 'string' | 'number' | 'object' | 'array',
+  [index: string]: 'string' | 'number' | 'object' | 'array' | 'boolean',
 }
