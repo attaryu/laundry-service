@@ -181,12 +181,14 @@ export async function getSpecificOutletService(params: any) {
         role: 'kasir',
       }
     });
+
     const managerCount = await user.count({
       where: {
         id_outlet: params.outletId,
         role: 'manajer',
       }
     });
+
     const payload = await outlet.findUnique({
       where: {
         id: params.outletId,
@@ -197,6 +199,11 @@ export async function getSpecificOutletService(params: any) {
         alamat: true,
         telepon: true,
         tb_user: {
+          where: {
+            NOT: {
+              role: 'admin',
+            },
+          },
           select: {
             id: true,
             name: true,

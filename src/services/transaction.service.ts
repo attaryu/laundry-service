@@ -160,6 +160,7 @@ export async function createTransactionService({ requestToken, body }: createTra
       data: {
         id_transaksi: transaction.id,
         id_user: token.id,
+        id_outlet: transaction.id_outlet,
       }
     });
 
@@ -238,13 +239,6 @@ export async function cancelTransactionService({ requestToken, params }: cancelT
         kode_invoice: params.kode_invoice,
       }
     });
-
-    await logTransaksi.create({
-      data: {
-        id_user: token.id,
-        id_transaksi: existingTransaction.id,
-      }
-    })
     
     return {
       code: 200,

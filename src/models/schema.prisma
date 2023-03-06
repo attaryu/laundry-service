@@ -77,8 +77,9 @@ model transaksi {
 model logTransaksi {
   id           Int      @id @default(autoincrement())
   id_transaksi String   @db.Char(15)
-  tanggal      DateTime @default(now())
   id_user      String   @db.Char(15)
+  id_outlet    String   @db.Char(15)
+  dateNow      DateTime @default(now())
 
   @@map("log_transaksi")
 }

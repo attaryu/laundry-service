@@ -86,6 +86,9 @@ export async function getAllEmailService({ requestToken, query }: getAllEmailSer
       },
       {
         penerima: 'all',
+      },
+      {
+        id_pengirim: token.id,
       }
     ],
   };
