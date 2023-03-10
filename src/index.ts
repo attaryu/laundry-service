@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import http from 'http';
 import { Server } from 'socket.io';
+import cors from 'cors';
 
 import Router from './routes/index.js';
 
@@ -10,9 +11,14 @@ const app = express();
 const port = 3030;
 
 const server = http.createServer(app);
-const io = new Server(server);
+export const io = new Server(server);
 
 app.use(helmet());
+
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true,
+}))
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

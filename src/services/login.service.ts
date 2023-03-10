@@ -15,24 +15,25 @@ export async function loginService(body: any) {
     return propertyCorrection;
   }
 
-  try {  
+  try {
     const existingUser: ExistingUser | null = await user.findUnique({
       where: { username: body.username },
       select: {
         id: true,
+        name: true,
         username: true,
         password: true,
         role: true,
       },
     });
-  
+
     if (!existingUser) {
       return {
         code: 404,
-        message: `user dengan username ${body.username} tidak terdaftar`,
+        message: `User dengan username ${body.username} tidak terdaftar`,
       };
     }
-  
+
     const match = await bcrypt.compare(body.password, existingUser.password);
 
     if (!match) {
@@ -41,7 +42,7 @@ export async function loginService(body: any) {
         message: 'Password salah',
       };
     }
-  
+
     const requestToken = jwt.sign({
       id: existingUser.id,
       username: existingUser.username,
@@ -49,13 +50,13 @@ export async function loginService(body: any) {
     }, <string>process.env.REQUEST_SECRET_KEY, {
       expiresIn: '1m',
     });
-    
+
     const refreshToken = jwt.sign({
       id: existingUser.id,
     }, <string>process.env.REFRESH_SECRET_KEY, {
       expiresIn: '3d',
     });
-  
+
     await userAuth.upsert({
       where: {
         id_user: existingUser.id
@@ -75,15 +76,20 @@ export async function loginService(body: any) {
         id_user: existingUser.id,
       }
     })
-  
+
     return {
       code: 201,
-      message: 'login berhasil',
+      message: 'Login berhasil',
       payload: {
         id: existingUser.id,
+        name: existingUser.name,
+        username: existingUser.username,
+        role: existingUser.role,
+      },
+      token: {
         refreshToken,
         requestToken,
-      },
+      }
     };
   } catch (message) {
     console.error(message);
@@ -94,6 +100,7 @@ export async function loginService(body: any) {
 
 interface ExistingUser {
   id: string,
+  name: string,
   username: string,
   password: string,
   role: string,
@@ -109,7 +116,7 @@ export async function generateNewRequestTokenService(refreshToken: string) {
 
     return serverError()
   }
-  
+
   try {
     const existingRefreshToken: ExistingRefreshToken | null = await userAuth.findUnique({
       where: {
@@ -120,13 +127,14 @@ export async function generateNewRequestTokenService(refreshToken: string) {
         tb_user: {
           select: {
             id: true,
+            name: true,
             username: true,
             role: true,
           }
         }
       }
     });
-    
+
     if (!existingRefreshToken) {
       return {
         code: 400,
@@ -146,6 +154,7 @@ export async function generateNewRequestTokenService(refreshToken: string) {
       code: 201,
       message: 'request token berhasil di perbarui',
       payload: {
+        user: { ...existingRefreshToken.tb_user },
         request_token: requestToken,
       }
     }
@@ -161,15 +170,28 @@ export async function logoutService(refreshToken: string) {
     jwt.verify(refreshToken, <string>process.env.REFRESH_SECRET_KEY);
   } catch (error: any) {
     console.error(error);
-    
+
     if ('name' in error) {
       return tokenError(error.name);
     }
 
     return serverError();
   }
-  
+
   try {
+    const existingRefreshToken = await userAuth.findFirst({
+      where: {
+        refresh_token: refreshToken,
+      }
+    });
+    
+    if (!existingRefreshToken) {
+      return {
+        code: 404,
+        message: 'refresh token tidak terdaftar',
+      }
+    }
+    
     const payload = await userAuth.delete({
       where: {
         refresh_token: refreshToken,
@@ -205,6 +227,7 @@ interface ExistingRefreshToken {
   refresh_token: string,
   tb_user: {
     id: string,
+    name: string
     username: string,
     role: string,
   },

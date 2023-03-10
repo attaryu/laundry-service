@@ -4,7 +4,7 @@ import {
   deleteSpecificUserController,
   editUserController,
   getAllUserController,
-  getSpecificUserController
+  getSpecificUserController,
 } from '../controllers/user.controller.js';
 import { methodNotAllowed } from '../lib/handlerReuse.js';
 

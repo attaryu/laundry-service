@@ -29,7 +29,7 @@ export async function getAllUserService(query: any) {
         role: query.role,
       })
     }
-    
+
     if (query.search) {
       filter.AND.push({
         OR: [
@@ -46,7 +46,7 @@ export async function getAllUserService(query: any) {
         ]
       });
     }
-    
+
     const perPage = 10;
     const page = Number(query.page);
     const allData = await user.count();
@@ -167,7 +167,7 @@ export async function editUserService({ requestToken, body, params }: any) {
   if (propertyCorrection) {
     return propertyCorrection;
   }
-  
+
   if (/[^manajer|kasir]/.test(body.role)) {
     return {
       code: 400,
@@ -207,7 +207,7 @@ export async function editUserService({ requestToken, body, params }: any) {
         message: `outlet dengan id ${body.id_outlet} tidak terdaftar`,
       }
     }
-    
+
     let updateRecord: any = {
       name: body.name,
       username: body.username,
@@ -273,7 +273,7 @@ export async function deleteUserService({ requestToken, params }: any) {
   }
 
   try {
-    const existingUser = await user.findUnique({ where: { id: params.userId }});
+    const existingUser = await user.findUnique({ where: { id: params.userId } });
 
     if (!existingUser) {
       return {
@@ -282,14 +282,14 @@ export async function deleteUserService({ requestToken, params }: any) {
       };
     }
 
-    await user.delete({ where: { id: params.userId }});
+    await user.delete({ where: { id: params.userId } });
     await logUser.create({
       data: {
         id_user: params.userId,
         action: 'hapus',
       }
     })
-    
+
     return {
       code: 200,
       message: `user dengan id ${params.userId} berhasil dihapus`,

@@ -20,16 +20,15 @@ export async function loginController(req: Request, res: Response) {
 
     return res
       .status(payloads.code)
-      .cookie('refresh-token', payloads.payload.refreshToken, {
+      .cookie('refresh-token', payloads.token.refreshToken, {
         httpOnly: true,
-        secure: process.env.ENVIRONTMENT === 'production',
-        expires: new Date(Date.now() + ((24 * 60 * 60 * 1000) * 3)),
+        maxAge: (24 * 60 * 60 * 1000) * 3,
       })
       .json({
         ...payloads,
-        payload: {
-          id: payloads.payload.id,
-          request_token: payloads.payload.requestToken,
+        payload: payloads.payload,
+        token: {
+          requestToken: payloads.token.requestToken,
         },
       });
   } catch (message) {

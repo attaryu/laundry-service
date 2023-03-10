@@ -2,7 +2,7 @@ import express from 'express';
 
 import clientRouter from './client.route.js';
 import emailRouter from './email.route.js';
-import graphRouter from './graph.route.js';
+import analyticRouter from './analytic.route.js';
 import logRouter from './log.route.js';
 import loginRouter from './login.route.js';
 import outletRouter from './outlet.route.js';
@@ -22,7 +22,7 @@ Router.use(registerRouter);
 Router.use(transactionRouter);
 Router.use(emailRouter);
 Router.use(logRouter);
-Router.use(graphRouter);
+Router.use(analyticRouter);
 Router.use(reportRouter);
 Router.use(userRouter);
 
