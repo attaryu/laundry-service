@@ -35,12 +35,12 @@ export async function getAllUserService(query: any) {
         OR: [
           {
             name: {
-              search: query.search,
+              contains: query.search,
             }
           },
           {
             username: {
-              search: query.search,
+              contains: query.search,
             }
           }
         ]
@@ -159,10 +159,6 @@ export async function editUserService({ requestToken, body, params }: any) {
     role: 'string',
     id_outlet: 'string',
   });
-
-  if (propertyCorrection) {
-    return propertyCorrection;
-  }
 
   if (propertyCorrection) {
     return propertyCorrection;

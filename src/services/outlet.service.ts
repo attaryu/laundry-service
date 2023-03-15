@@ -117,17 +117,17 @@ export async function getAllOutletService(query: any) {
       OR: [
         {
           nama: {
-            search: query.search,
+            contains: query.search,
           },
         },
         {
           alamat: {
-            search: query.search,
+            contains: query.search,
           },
         },
         {
           telepon: {
-            search: query.search,
+            contains: query.search,
           },
         }
       ]
@@ -139,16 +139,6 @@ export async function getAllOutletService(query: any) {
     const page = Number(query.page);
     const allData = await outlet.count();
     const allPage = Math.ceil(allData / perPage);
-    const payload = await outlet.findMany({
-      where: filter,
-      select: {
-        nama: true,
-        alamat: true,
-        telepon: true,
-      },
-      take: perPage,
-      skip: (perPage * page) - perPage
-    });
 
     if (query.page > allPage) {
       return {
@@ -156,6 +146,18 @@ export async function getAllOutletService(query: any) {
         message: `page ke-${query.page} tidak ada, hanya tersedia ${allPage} page`,
       }
     }
+
+    const payload = await outlet.findMany({
+      where: filter,
+      select: {
+        id: true,
+        nama: true,
+        alamat: true,
+        telepon: true,
+      },
+      take: perPage,
+      skip: (perPage * page) - perPage,
+    });
 
     return {
       code: 200,
@@ -228,6 +230,7 @@ export async function getSpecificOutletService(params: any) {
             id: true,
             jenis: true,
             harga: true,
+            nama_paket: true,
           },
         },
       }
@@ -298,6 +301,11 @@ export async function editOutletService(requestToken: string, body: any, params:
           {
             telepon: body.telepon,
           },
+        ],
+        NOT: [
+          {
+            id: params.outletId,
+          }
         ]
       },
       select: {
@@ -407,6 +415,26 @@ export async function deleteOutletService({ requestToken, params }: any) {
     }
   } catch (error) {
     console.error(error);
+
+    return serverError();
+  }
+}
+
+export async function getNameOutletService() {
+  try {
+    const payload = await outlet.findMany({
+      select: {
+        id: true,
+        nama: true,
+      }
+    });
+
+    return {
+      code: 200,
+      payload,
+    }
+  } catch (error) {
+    console.log(error);
 
     return serverError();
   }

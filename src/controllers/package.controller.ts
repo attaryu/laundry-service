@@ -3,7 +3,11 @@ import type { Request, Response } from 'express';
 import { serverErrorHandler } from '../lib/handlerReuse.js';
 import { verifyRequestToken } from '../lib/responseReuse.js';
 import {
-  createPackageService, deletePackageService, editPackageService, getAllPackageService,
+  createPackageService,
+  deletePackageService,
+  editPackageService,
+  getAllPackageService,
+  getSpecificPackageService,
 } from '../services/package.service.js';
 
 export async function createPackageController(req: Request, res: Response) {
@@ -38,6 +42,25 @@ export async function getAllPackageController(req: Request, res: Response) {
 
   try {
     const payloads = await getAllPackageService(req.query);
+
+    return res.status(payloads.code).json(payloads);
+  } catch (error) {
+    console.error(error);
+  
+    return serverErrorHandler(res);
+  }
+}
+
+export async function getSpecificPackageController(req: Request, res: Response) {
+  const token = req.headers.authorization?.split(' ')[1];
+  const payloads = verifyRequestToken(token);
+
+  if (payloads) {
+    return res.status(payloads.code).json(payloads);
+  }
+
+  try {
+    const payloads = await getSpecificPackageService(req.params);
 
     return res.status(payloads.code).json(payloads);
   } catch (error) {

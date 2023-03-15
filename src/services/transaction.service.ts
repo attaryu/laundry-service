@@ -90,7 +90,7 @@ export async function createTransactionService({ requestToken, body }: createTra
       }
     });
 
-    let  clientId;
+    let clientId;
   
     if (!checkNameClient) {
       const payloads = await createClientService(requestToken, body.pelanggan);
@@ -470,16 +470,25 @@ export async function getAllTransactionService(query: getAllTransactionService) 
 
   if (query.search) {
     filter = {
-      kode_invoice: {
-        search: query.search,
-      },
+      OR: [
+        {
+          kode_invoice: {
+            contains: query.search,
+          },
+        },
+        {
+          tb_pelanggan: {
+            nama: query.search,
+          }
+        }
+      ]
     }
   }
   
   try {
     const perPage = 10;
     const page = Number(query.page);
-    const allData = await paket.count();
+    const allData = await transaksi.count();
     const allPage = Math.ceil(allData / perPage);
     const payload = await transaksi.findMany({
       where: filter,
@@ -508,6 +517,9 @@ export async function getAllTransactionService(query: getAllTransactionService) 
             nama_paket: true,
           },
         },
+      },
+      orderBy: {
+        tanggal: 'desc'
       },
       take: perPage,
       skip: (perPage * page) - perPage

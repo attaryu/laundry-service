@@ -129,6 +129,7 @@ export async function generateNewRequestTokenService(refreshToken: string) {
             id: true,
             name: true,
             username: true,
+            id_outlet: true,
             role: true,
           }
         }

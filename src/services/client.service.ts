@@ -119,7 +119,15 @@ export async function getAllClientService(query: any) {
     }
   }
 
+  
   if (query.gender) {
+    if (!/laki_laki|perempuan/.test(query.gender)) {
+      return {
+        code: 400,
+        message: `jenis kelamin ${query.gender} tidak valid`,
+      }
+    }
+
     filter.AND.push({
       jenis_kelamin: query.gender,
     });
@@ -130,17 +138,17 @@ export async function getAllClientService(query: any) {
       OR: [
         {
           nama: {
-            search: query.search,
+            contains: query.search,
           },
         },
         {
           alamat: {
-            search: query.search,
+            contains: query.search,
           },
         },
         {
           telepon: {
-            search: query.search,
+            contains: query.search,
           },
         }
       ]
@@ -324,6 +332,7 @@ export async function editClientService(requestToken: string, body: any, params:
         nama: body.nama,
         alamat: body.alamat,
         telepon: body.telepon,
+        jenis_kelamin: body.jenis_kelamin,
       },
       select: {
         id: true,

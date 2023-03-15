@@ -98,26 +98,6 @@ export async function getAllPackageService(query: any) {
     }
   }
 
-  if (query.price_range) {
-    const lessThan = query.price_range.split('-')[0];
-    const greaterThan = query.price_range.split('-')[1];
-
-    if (lessThan && greaterThan) {
-      filter = {
-        ...filter,
-        harga: {
-          lte: Number(greaterThan),
-          gte: Number(lessThan),
-        },
-      }
-    } else {
-      filter = {
-        ...filter,
-        harga: Number(lessThan),
-      }
-    }
-  }
-
   if (query.id_outlet) {
     filter = {
       ...filter,
@@ -136,7 +116,7 @@ export async function getAllPackageService(query: any) {
     filter = {
       ...filter,
       nama_paket: {
-        search: query.search,
+        contains: query.search,
       },
     };
   }
@@ -153,7 +133,12 @@ export async function getAllPackageService(query: any) {
         nama_paket: true,
         jenis: true,
         harga: true,
-        id_outlet: true,
+        tb_outlet: {
+          select: {
+            id: true,
+            nama: true,
+          }
+        }
       },
       take: perPage,
       skip: (perPage * page) - perPage
@@ -181,13 +166,43 @@ export async function getAllPackageService(query: any) {
   }
 }
 
+export async function getSpecificPackageService(params: any) {
+  try {
+    const payload = await paket.findFirst({
+      where: { id: params.paketId },
+      select: {
+        id: true,
+        nama_paket: true,
+        jenis: true,
+        harga: true,
+      }
+    });
+
+    if (!payload) {
+      return {
+        code: 404,
+        message: `paket dengan id ${params.paketId} tidak ditemukan`
+      }
+    }
+
+    return {
+      code: 200,
+      payload,
+    }
+  } catch (error) {
+    console.error(error);
+
+    return serverError();
+  }
+}
+
 export async function editPackageService(requestToken: string, body: any, params: any) {
   const token: any = jwt.decode(requestToken);
 
-  if (/kasir|admin/.test(token.role)) {
+  if (/kasir/.test(token.role)) {
     return {
       code: 401,
-      message: 'anda bukan manajer',
+      message: 'anda bukan manajer atau admin',
     };
   }
 
@@ -243,10 +258,10 @@ export async function editPackageService(requestToken: string, body: any, params
 export async function deletePackageService({ requestToken, params }: any) {
   const token: any = jwt.decode(requestToken);
 
-  if (/kasir|admin/.test(token.role)) {
+  if (/kasir/.test(token.role)) {
     return {
       code: 401,
-      message: 'anda bukan manajer',
+      message: 'anda bukan manajer atau admin',
     };
   }
 

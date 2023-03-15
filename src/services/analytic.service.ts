@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { serverError } from '../lib/responseReuse.js';
 import { outlet, pelanggan, transaksi, user } from '../models/index.js';
 
+const day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jum\'at', 'Sabtu'];
+
 export async function graphService(requestToken: string) {
   const token: any = jwt.decode(requestToken);
 
@@ -16,20 +18,23 @@ export async function graphService(requestToken: string) {
   const msPerDay = 24 * 60 * 60 * 1000;
   const today = new Date();
   const dayIndex = today.getDay();
+  const month = zeroFormat(today.getMonth() + 1);
+  const year = today.getFullYear();
 
   const currentSunday = today.getTime() - msPerDay * dayIndex;
   const currentSaturday = currentSunday + msPerDay * 7;
   const pastSunday = currentSunday - msPerDay * 7;
   const pastSaturday = pastSunday + msPerDay * 7;
 
-  const currentFrom = `${new Date(currentSunday).toISOString().split('T')[0]
-    }T17:00:00.000Z`;
-  const currentUntil = `${new Date(currentSaturday).toISOString().split('T')[0]
-    }T16:59:59.999Z`;
-  const pastFrom = `${new Date(pastSunday).toISOString().split('T')[0]
-    }T17:00:00.000Z`;
-  const pastUntil = `${new Date(pastSaturday).toISOString().split('T')[0]
-    }T16:59:59.999Z`;
+  const dateCurrentSunday = zeroFormat(new Date(currentSunday).getDate() - 1);
+  const dateCurrentSaturday = zeroFormat(new Date(currentSaturday).getDate());
+  const datePastSunday = zeroFormat(new Date(pastSunday).getDate() - 1);
+  const datePastSaturday = zeroFormat(new Date(pastSaturday).getDate());
+
+  const currentFrom = `${year}-${month}-${dateCurrentSunday}T17:00:00.000Z`;
+  const currentUntil = `${year}-${month}-${dateCurrentSaturday}T17:00:00.000Z`;
+  const pastFrom = `${year}-${month}-${datePastSunday}T17:00:00.000Z`;
+  const pastUntil = `${year}-${month}-${datePastSaturday}T17:00:00.000Z`;
 
   try {
     const currentData = await transaksi.findMany({
@@ -56,8 +61,8 @@ export async function graphService(requestToken: string) {
       },
     });
 
-    const countDataPerDayThisWeeks = [];
-    const countDataPerDayLastWeek = [];
+    const countDataPerDayThisWeeks: number[] = [];
+    const countDataPerDayLastWeek: number[] = [];
 
     for (let i = 1; i <= 7; i++) {
       const trackedDateThisWeeks = dateTracker(currentFrom, i);
@@ -91,16 +96,17 @@ export async function graphService(requestToken: string) {
     }
 
     const processedData = {
-      graph: {
-        thisWeeks: countDataPerDayThisWeeks,
-        lastWeeks: countDataPerDayLastWeek,
-      },
+      graph: countDataPerDayThisWeeks.map((data, i) => ({
+        name: day[i],
+        thisWeeks: data === 0 ? null : data,
+        lastWeek: countDataPerDayLastWeek[i] === 0 ? null : countDataPerDayLastWeek[i],
+      })),
     };
 
     return {
       code: 200,
       message: 'ok',
-      payload: processedData.graph,
+      payload: processedData,
     };
   } catch (error) {
     console.error(error);
@@ -153,27 +159,30 @@ export async function incomeService(requestToken: string, query: any) {
 
   let todayQuery = {};
   
+  console.log(query.today);
   if (query.today === 'true') {
-    const today = new Date().toLocaleString().split(', ')[0];
+    const today = new Date();
+
+    const gte = new Date(today.getTime() - (24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+    const lte = new Date(today).toISOString().split('T')[0];
 
     todayQuery = {
       tanggal: {
-        gte: new Date(`${today}, 00:00:00`).toISOString(),
-        lte: new Date(`${today}, 23:59:59`).toISOString(),
+        gte: `${gte}T17:00:00.000Z`,
+        lte: `${lte}T16:59:59.999Z`,
       }
     }
   }
 
   try {
-    const totalTransaction = await transaksi.groupBy({
-      by: ['total'],
-      _sum: {
+    const totalTransaction = await transaksi.findMany({
+      where: todayQuery,
+      select: {
         total: true,
       },
-      where: todayQuery,
     });
 
-    if (totalTransaction) {
+    if (!totalTransaction) {
       return {
         code: 404,
         message: 'tidak ada transaksi',
@@ -183,7 +192,7 @@ export async function incomeService(requestToken: string, query: any) {
     return {
       code: 201,
       payload: {
-        total: totalTransaction
+        total: totalTransaction.reduce((pre, data) => data.total + pre, 0),
       }
     }
   } catch (error) {
@@ -208,6 +217,10 @@ function dateTracker(rawDate: string, fromNow: number) {
 
   return {
     from: new Date(`${trackedMinusOne}T17:00:00.000Z`).getTime(),
-    until: new Date(`${tracked}T16:59:59.999Z`).getTime(),
+    until: new Date(`${tracked}T17:00:00.000Z`).getTime(),
   };
+}
+
+function zeroFormat(date: number) {
+  return String(date).length === 1 ? `0${date}` : date;
 }

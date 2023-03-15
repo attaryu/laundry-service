@@ -123,25 +123,24 @@ export async function getAllEmailService({ requestToken, query }: getAllEmailSer
       arsip: true,
       tanggal: true,
       penting: true,
+      tb_user: {
+        select: {
+          id: true,
+          name: true,
+        }
+      }
     };
 
     switch (token.role) {
-      case 'kasir':
-        payload = await surat.findMany({
-          where: filter,
-          select,
-        });
-
-        break;
       case 'manajer':
+        case 'admin':
+          payload = await surat.findMany({ select });
+          break;
+      default:
         payload = await surat.findMany({
           where: filter,
           select,
         });
-
-        break;
-      case 'admin':
-        payload = await surat.findMany({ select });
     }
 
     return {
