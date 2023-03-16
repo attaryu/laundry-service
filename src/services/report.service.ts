@@ -1,10 +1,9 @@
 import jwt from 'jsonwebtoken';
 
 import { serverError } from '../lib/responseReuse.js';
-import propertyChecker from '../lib/propertyChecker.js';
 import { outlet, transaksi, user } from '../models/index.js';
 
-export async function generateTransactionReportService({ requestToken, body }: generateTransactionReportService) {
+export async function generateTransactionReportService({ requestToken, query }: generateTransactionReportService) {
   const token: any = jwt.decode(requestToken);
 
   if (/kasir/.test(token.role)) {
@@ -14,28 +13,11 @@ export async function generateTransactionReportService({ requestToken, body }: g
     }
   }
 
-  const propertyCorrect = propertyChecker(body, {
-    target: 'string',
-  });
-
-  if (propertyCorrect) {
-    return propertyCorrect;
-  }
-  
-  const propertyCorrect2 = propertyChecker(body.date, {
-    from: 'string',
-    until: 'string',
-  })
-  
-  if (propertyCorrect2) {
-    return propertyCorrect2;
-  }
-
   try {
     let filter: any = {
       tanggal: {
-        gte: body.date.from,
-        lte: body.date.until,
+        gte: new Date(query.dateFrom),
+        lte: new Date(query.dateUntil),
       }
     }
     
@@ -60,23 +42,23 @@ export async function generateTransactionReportService({ requestToken, body }: g
         ...filter,
         id_outlet: existingUser.id_outlet,
       };
-    } else if (token.role === 'admin' && body.target !== 'all') {
+    } else if (token.role === 'admin' && query.target !== 'all') {
       const existingOutlet = await outlet.findFirst({
         where: {
-          id: body.target,
+          id: query.target,
         },
       });
 
       if (!existingOutlet) {
         return {
           code: 404,
-          message: `outlet dengan id ${body.target} tidak ditemukan`,
+          message: `outlet dengan id ${query.target} tidak ditemukan`,
         }
       }
       
       filter = {
         ...filter,
-        id_outlet: body.target,
+        id_outlet: query.target,
       };
     }
 
@@ -84,16 +66,26 @@ export async function generateTransactionReportService({ requestToken, body }: g
       where: filter,
       select: {
         id: true,
-        id_outlet: true,
-        id_user: true,
-        id_paket: true,
-        id_pelanggan: true,
         kode_invoice: true,
-        status: true,
-        diskon: true,
         total: true,
-        lunas: true,
         tanggal: true,
+        diskon: true,
+        lunas: true,
+        tb_pelanggan: {
+          select: {
+            nama: true,
+          },
+        },
+        tb_outlet: {
+          select: {
+            nama: true,
+          },
+        },
+        tb_paket: {
+          select: {
+            nama_paket: true,
+          }
+        }
       },
       orderBy: {
         tanggal: 'desc'
@@ -114,11 +106,9 @@ export async function generateTransactionReportService({ requestToken, body }: g
 
 interface generateTransactionReportService {
   requestToken: string,
-  body: {
+  query: {
     target: string | 'all',
-    date: {
-      from: string,
-      until: string,
-    }
+    dateFrom: string,
+    dateUntil: string,
   },
 }

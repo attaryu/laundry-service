@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import nanoid from '../lib/customNanoid.js';
 import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
-import { paket } from '../models/index.js';
+import { paket, user } from '../models/index.js';
 
 export async function createPackageService({ requestToken, body }: createPackageService) {
   // identify role
@@ -290,6 +290,40 @@ export async function deletePackageService({ requestToken, params }: any) {
     }
   } catch (error) {
     console.error(error);
+
+    return serverError();
+  }
+}
+
+export async function getNamePackageService(requestToken: string) {
+  const token: any = jwt.decode(requestToken);
+  
+  try {
+    const existingOutlet = await user.findFirst({
+      where: {
+        id: token.id,
+      },
+      select: {
+        id_outlet: true,
+      },
+    });
+    
+    const payload = await paket.findMany({
+      where: {
+        id_outlet: existingOutlet?.id_outlet,
+      },
+      select: {
+        id: true,
+        nama_paket: true,
+      }
+    });
+
+    return {
+      code: 200,
+      payload,
+    }
+  } catch (error) {
+    console.log(error);
 
     return serverError();
   }

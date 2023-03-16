@@ -5,11 +5,10 @@ import propertyChecker from '../lib/propertyChecker.js';
 import { serverError } from '../lib/responseReuse.js';
 import {
   logTransaksi,
-  outlet,
   paket,
   pelanggan,
   transaksi,
-  user,
+  user
 } from '../models/index.js';
 import { createClientService } from './client.service.js';
 
@@ -26,7 +25,6 @@ export async function createTransactionService({ requestToken, body }: createTra
 
   const propertyCorrect = propertyChecker(body, {
     id_paket: 'string',
-    id_outlet: 'string',
   })
 
   if (propertyCorrect) {
@@ -35,38 +33,20 @@ export async function createTransactionService({ requestToken, body }: createTra
   
   try {
     // check outlet
-    const existingOutlet = await outlet.findUnique({
-      where: {
-        id: body.id_outlet,
-      },
-    });
-
-    if (!existingOutlet) {
-      return {
-        code: 404,
-        message: `outlet dengan id ${body.id_outlet} tidak ditemukan`,
-      }
-    }
-
-    const checkUser = await user.findFirst({
+    const getOutlet: any = await user.findFirst({
       where: {
         id: token.id,
-        id_outlet: existingOutlet.id,
       },
-    });
-
-    if (!checkUser) {
-      return {
-        code: 401,
-        message: `anda bukan kasir dari outlet ${existingOutlet.id}`,
+      select: {
+        id_outlet: true,
       }
-    }
+    });
 
     // check price and package
     const selectedPackage = await paket.findFirst({
       where: {
         id: body.id_paket,
-        id_outlet: body.id_outlet,
+        id_outlet: getOutlet.id_outlet,
       },
       select: {
         harga: true,
@@ -76,7 +56,7 @@ export async function createTransactionService({ requestToken, body }: createTra
     if (!selectedPackage) {
       return {
         code: 404,
-        message: `paket dengan id ${body.id_paket} tidak di temukan pada outlet dengan id ${body.id_outlet}`,
+        message: `paket dengan id ${body.id_paket} tidak di temukan pada outlet dengan id ${getOutlet.id_outlet}`,
       };
     }
     
@@ -135,7 +115,7 @@ export async function createTransactionService({ requestToken, body }: createTra
     const transaction = await transaksi.create({
       data: {
         id: nanoid(),
-        id_outlet: body.id_outlet,
+        id_outlet: getOutlet.id_outlet,
         id_paket: body.id_paket,
         id_user: token.id,
         id_pelanggan: clientId,
@@ -180,9 +160,7 @@ interface createTransaction {
   requestToken: string,
   body: {
     id_paket: string,
-    id_outlet: string,
     pelanggan: {
-      id?: string,
       nama?: string,
       alamat?: string,
       telepon?: string,

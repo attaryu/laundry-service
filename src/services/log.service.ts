@@ -16,14 +16,12 @@ export async function getAllLogService(requestToken: string) {
   }
 
   try {
-    const transaction = await logTransaksi.findMany({ take: 30 });
-
-    const allLog = transaction.sort((a, b) => new Date(b.dateNow).getTime() - new Date(a.dateNow).getTime());
+    const transaction = await logTransaksi.findMany({ take: 30, orderBy: { dateNow: 'desc' } });
 
     return {
       code: 200,
       message: 'success',
-      payload: allLog,
+      payload: transaction,
     }
   } catch (error) {
     console.error(error);

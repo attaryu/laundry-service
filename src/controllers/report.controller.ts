@@ -17,7 +17,7 @@ export async function generateTransactionReportController(req: Request, res: Res
   try {
     const payloads: any = await generateTransactionReportService({
       requestToken: <string>token,
-      body: req.body,
+      query: <any>req.query,
     });
 
     return res.status(payloads.code).json(payloads);
