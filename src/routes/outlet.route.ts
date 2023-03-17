@@ -21,7 +21,7 @@ outletRouter.route('/outlet/:outletId')
   .put(editOutletController)
   .delete(deleteOutletController)
   .all(methodNotAllowed);
-  
+
 outletRouter.route('/outlet')
   .post(createOutletController)
   .get(getAllOutletController)

@@ -410,3 +410,18 @@ export async function deleteClientService({ requestToken, params }: any) {
     return serverError();
   }
 }
+
+export async function getNameClientService() {
+  try {
+    const payload = await pelanggan.findMany({ select: { id: true, nama: true } });
+    
+    return {
+      code: 200,
+      payload,
+    }
+  } catch (error) {
+    console.error(error);
+
+    return serverError();
+  }
+}

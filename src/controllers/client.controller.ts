@@ -7,6 +7,7 @@ import {
   deleteClientService,
   editClientService,
   getAllClientService,
+  getNameClientService,
   getSpecificClientService
 } from '../services/client.service.js';
 
@@ -99,6 +100,25 @@ export async function deleteClientController(req: Request, res: Response) {
       requestToken: token,
       params: req.params,
     });
+    
+    return res.status(payloads.code).json(payloads);
+  } catch (error) {
+    console.error(error);
+  
+    return serverErrorHandler(res);
+  }  
+}
+
+export async function getNameClientController(req: Request, res: Response) {
+  const token = req.headers.authorization?.split(' ')[1];
+  const payloads = verifyRequestToken(token);
+
+  if (payloads) {
+    return res.status(payloads.code).json(payloads);
+  }
+  
+  try {
+    const payloads: any = await getNameClientService();
     
     return res.status(payloads.code).json(payloads);
   } catch (error) {
