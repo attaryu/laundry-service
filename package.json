@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc && prisma generate --schema=./src/models/schema.prisma",
-    "start": "node dist/index.js",
+    "start": "node api/index.js",
     "dev": "concurrently \"tsc --watch\" \"nodemon -q dist\"",
     "generate-db": "prisma generate --schema=./src/models/schema.prisma",
     "pull-db": "prisma db pull --schema=./src/models/schema.prisma",
