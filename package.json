@@ -4,8 +4,8 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "start": "nodemon dist",
+    "build": "tsc && prisma generate && prisma migrate deploy",
+    "start": "node dist",
     "dev": "concurrently \"tsc --watch\" \"nodemon -q dist\"",
     "generate-db": "prisma generate --schema=./src/models/schema.prisma",
     "pull-db": "prisma db pull --schema=./src/models/schema.prisma",
