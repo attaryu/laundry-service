@@ -414,7 +414,7 @@ interface changeStatusTransactionService {
 }
 
 export async function getAllTransactionService(query: getAllTransactionService) {
-  let filter = {};
+  const filter: { [index: string]: any } = {};
 
   if (!query.page) {
     return {
@@ -423,50 +423,138 @@ export async function getAllTransactionService(query: getAllTransactionService) 
     }
   }
 
-  if (query.id_outlet) {
-    filter = {
-      ...filter,
-      id_outlet: query.id_outlet,
+  function queryMaker(raw: Omit<Filter, 'type'>) {
+    const result: { [index: string]: any } = {};
+    const isOrIsNot = <T>(value: T) => raw.equals === 'IS' ? value : { not: value };
+
+    switch (typeof raw.value) {
+      case 'string':
+      case 'number':
+      case 'boolean':
+        result[raw.attribute] = isOrIsNot(raw.value);
+        break;
+      default:
+        if ('min' in raw.value && 'max' in raw.value) {
+          result[raw.attribute] = isOrIsNot({
+            gte: raw.attribute === 'tanggal' ? new Date(raw.value.min) : raw.value.min,
+            lte: raw.attribute === 'tanggal' ? new Date(raw.value.max) : raw.value.max,
+          });
+        } else if ('min' in raw.value) {
+          result[raw.attribute] = isOrIsNot({
+            gte: raw.attribute === 'tanggal' ? new Date(raw.value.min) : raw.value.min,
+          });
+        } else {
+          result[raw.attribute] = isOrIsNot({
+            lte: raw.attribute === 'tanggal' ? new Date(raw.value.max) : raw.value.max,
+          });
+        }
     }
+
+    return result;
   }
 
-  if (query.status) {
-    filter = {
-      ...filter,
-      status: query.status,
-    }
-  }
+  const body: getAllTransactionService['filter'] = query.filter ? JSON.parse(query.filter as any) : false;
 
-  if (query.lunas) {
-    const bill = query.lunas === 'lunas' ? true : false;
-    
-    filter = {
-      ...filter,
-      lunas: bill,
-    }
-  }
+  if (body) {
+    body.filter.forEach((rawFilter) => {
+      if (body.operator) {
+        if (body.operator === 'AND') {
+          if (rawFilter.type === 'FILTER') {
+            filter[rawFilter.attribute] = queryMaker(rawFilter)[rawFilter.attribute];
 
-  if (query.search) {
-    filter = {
-      OR: [
-        {
-          kode_invoice: {
-            contains: query.search,
-          },
-        },
-        {
-          tb_pelanggan: {
-            nama: query.search,
+          } else {
+            if (!('AND' in filter)) {
+              filter.AND = [];
+            }
+            
+            const temporaryQuery: { [index: string]: any } = {};
+            
+            rawFilter.filter.forEach((rawSubFilter) => {
+              if (rawFilter.operator === 'AND') {
+                temporaryQuery[rawSubFilter.attribute] = queryMaker(rawSubFilter)[rawSubFilter.attribute];
+              } else {
+                if (!('OR' in temporaryQuery)) {
+                  temporaryQuery.OR = [];
+                }
+
+                temporaryQuery.OR.push(queryMaker(rawSubFilter));
+              }
+            });
+
+            filter.AND.push(temporaryQuery);
+          }
+
+        } else {
+          if (!('OR' in filter)) {
+            filter.OR = [];
+          }
+
+          if (rawFilter.type === 'FILTER') {
+            filter.OR.push(queryMaker(rawFilter));
+
+          } else {
+            const temporaryQuery: { [index: string]: any } = {};
+            
+            rawFilter.filter.forEach((rawSubFilter) => {
+              if (rawFilter.operator === 'AND') {
+                temporaryQuery[rawSubFilter.attribute] = queryMaker(rawSubFilter)[rawSubFilter.attribute];
+              } else {
+                if (!('OR' in temporaryQuery)) {
+                  temporaryQuery.OR = [];
+                }
+
+                temporaryQuery.OR.push(queryMaker(rawSubFilter));
+              }
+            });
+
+            filter.OR.push(temporaryQuery);
           }
         }
-      ]
-    }
+      } else {
+        /**
+         * * branch ini akan di jalankan jika nilai operator null dan sudah pasti hanya 1 query atau subquery
+         */
+
+        if (rawFilter.type === 'FILTER') {
+          filter[rawFilter.attribute] = queryMaker(rawFilter)[rawFilter.attribute];
+
+        } else {
+          rawFilter.filter.forEach((rawSubFilter) => {
+            if (rawFilter.operator === 'AND' || rawFilter.operator === null) {
+              filter[rawSubFilter.attribute] = queryMaker(rawSubFilter)[rawSubFilter.attribute];
+
+            } else {
+              if (!('OR' in filter)) {
+                filter.OR = [];
+              }
+
+              filter.OR.push(queryMaker(rawSubFilter));
+            }
+          });
+        }
+      }
+    });
+  } 
+
+  if (query.search) {
+    filter.OR.push(
+      {
+        kode_invoice: {
+          contains: query.search,
+        },
+      },
+      {
+        tb_pelanggan: {
+          nama: query.search,
+        },
+      }
+    );
   }
   
   try {
     const perPage = 10;
     const page = Number(query.page);
-    const allData = await transaksi.count();
+    const allData = await transaksi.count({ where: filter });
     const allPage = Math.ceil(allData / perPage);
     const payload = await transaksi.findMany({
       where: filter,
@@ -503,7 +591,7 @@ export async function getAllTransactionService(query: getAllTransactionService) 
       skip: (perPage * page) - perPage
     });
 
-    if (page > allPage) {
+    if (page > allPage && (body === null || body === undefined)) {
       return {
         code: 400,
         message: `page ke-${query.page} tidak ada, hanya tersedia ${allPage} page`,
@@ -525,13 +613,37 @@ export async function getAllTransactionService(query: getAllTransactionService) 
   }
 }
 
-interface getAllTransactionService {
-  page: string
-  id_outlet: string | undefined,
-  status: 'antrian' | 'proses' | 'selesai' | 'diambil' | undefined,
-  lunas: 'lunas' | 'belum_lunas',
-  search: string,
+type Filter = {
+  type: 'FILTER',
+  attribute: string,
+  value: string
+    | number
+    | boolean
+    | {
+      min: number | Date,
+      max: number | Date
+    } | {
+      min: number | Date,
+    } | {
+      max: number | Date
+    },
+  equals: 'IS' | 'IS_NOT',
 }
+
+type SubFilter = {
+  type: 'SUB_FILTER',
+  operator: 'AND' | 'OR',
+  filter: Array<Omit<Filter, 'type'>>
+}
+
+interface getAllTransactionService {
+  page: string,
+  search: string,
+  filter: {
+    operator: 'AND' | 'OR' | null,
+    filter: Array<Filter | SubFilter>,
+  },
+};
 
 export async function getSpecificTransactionService(params: getSpecificTransactionService) {
   if (!params.kode_invoice) {

@@ -9,11 +9,10 @@ datasource db {
 }
 
 model outlet {
-  id      String @id @db.Char(15)
-  nama    String @unique @db.VarChar(50)
-  alamat  String @unique @db.VarChar(255)
-  telepon String @unique @db.VarChar(15)
-
+  id           String      @id @db.Char(15)
+  nama         String      @unique @db.VarChar(50)
+  alamat       String      @unique @db.VarChar(255)
+  telepon      String      @unique @db.VarChar(15)
   tb_paket     paket[]
   tb_transaksi transaksi[]
   tb_user      user[]
@@ -38,13 +37,11 @@ model paket {
   jenis      tb_paket_jenis
   harga      Int
   nama_paket String         @db.VarChar(20)
+  tb_outlet  outlet         @relation(fields: [id_outlet], references: [id], onDelete: Cascade, map: "tb_paket_id_outlet")
+  transaksi  transaksi[]
 
-  tb_outlet outlet @relation(fields: [id_outlet], references: [id], onDelete: Cascade, map: "tb_paket_id_outlet")
-
-  transaksi transaksi[]
-
-  @@fulltext([nama_paket])
   @@index([id_outlet], map: "id_outlet")
+  @@fulltext([nama_paket])
   @@map("tb_paket")
 }
 
@@ -60,17 +57,16 @@ model transaksi {
   status       tb_transaksi_status @default(antrian)
   lunas        Boolean?            @default(false)
   total        Int
+  tb_outlet    outlet              @relation(fields: [id_outlet], references: [id], onDelete: Cascade, map: "tb_transaksi_id_outlet")
+  tb_paket     paket               @relation(fields: [id_paket], references: [id], onDelete: Cascade, map: "tb_transaksi_id_paket")
+  tb_pelanggan pelanggan           @relation(fields: [id_pelanggan], references: [id], onDelete: Cascade, map: "tb_transaksi_id_pelanggan")
+  tb_user      user                @relation(fields: [id_user], references: [id], onDelete: Cascade, map: "tb_transaksi_id_user")
 
-  tb_outlet    outlet    @relation(fields: [id_outlet], references: [id], onDelete: Cascade, map: "tb_transaksi_id_outlet")
-  tb_paket     paket     @relation(fields: [id_paket], references: [id], onDelete: Cascade, map: "tb_transaksi_id_paket")
-  tb_pelanggan pelanggan @relation(fields: [id_pelanggan], references: [id], onDelete: Cascade, map: "tb_transaksi_id_pelanggan")
-  tb_user      user      @relation(fields: [id_user], references: [id], onDelete: Cascade, map: "tb_transaksi_id_user")
-
-  @@fulltext([kode_invoice])
   @@index([id_outlet, id_pelanggan, id_user], map: "id_outlet")
   @@index([id_user], map: "id_user")
   @@index([id_paket], map: "tb_transaksi_id_paket")
   @@index([id_pelanggan], map: "tb_transaksi_id_pelanggan")
+  @@fulltext([kode_invoice])
   @@map("tb_transaksi")
 }
 
@@ -85,18 +81,16 @@ model logTransaksi {
 }
 
 model user {
-  id        String       @id @db.Char(15)
-  name      String       @unique @db.VarChar(50)
-  username  String       @unique @db.VarChar(50)
-  password  String       @db.VarChar(255)
-  id_outlet String       @db.Char(15)
-  role      tb_user_role
-
-  tb_outlet outlet @relation(fields: [id_outlet], references: [id], onDelete: Cascade, map: "tb_user_id_outlet")
-
-  tb_transaksi transaksi[]
-  user_auth    userAuth[]
+  id           String       @id @db.Char(15)
+  name         String       @unique @db.VarChar(50)
+  username     String       @unique @db.VarChar(50)
+  password     String       @db.VarChar(255)
+  id_outlet    String       @db.Char(15)
+  role         tb_user_role
   surat        surat[]
+  tb_transaksi transaksi[]
+  tb_outlet    outlet       @relation(fields: [id_outlet], references: [id], onDelete: Cascade, map: "tb_user_id_outlet")
+  user_auth    userAuth?
 
   @@index([id_outlet], map: "id_outlet")
   @@fulltext([name, username])
@@ -107,8 +101,7 @@ model userAuth {
   id            Int    @id @default(autoincrement())
   id_user       String @unique @db.Char(15)
   refresh_token String @unique @db.VarChar(255)
-
-  tb_user user @relation(fields: [id_user], references: [id], onDelete: Cascade, map: "user_auth_id_user")
+  tb_user       user   @relation(fields: [id_user], references: [id], onDelete: Cascade, map: "user_auth_id_user")
 
   @@index([id_user], map: "id_user")
   @@map("user_auth")
@@ -129,8 +122,7 @@ model pelanggan {
   alamat        String                     @db.VarChar(255)
   jenis_kelamin tb_pelanggan_jenis_kelamin
   telepon       String                     @unique @db.VarChar(15)
-
-  transaksi transaksi[]
+  transaksi     transaksi[]
 
   @@fulltext([nama, alamat, telepon])
   @@map("tb_pelanggan")
@@ -156,9 +148,9 @@ model surat {
   penting     Boolean        @default(false)
   dibaca      String         @db.LongText
   arsip       String         @db.LongText
+  tb_user     user           @relation(fields: [id_pengirim], references: [id], onDelete: Cascade, map: "surat_id_pengirim")
 
-  tb_user user @relation(fields: [id_pengirim], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "surat_id_pengirim")
-
+  @@index([id_pengirim], map: "surat_id_pengirim")
   @@map("tb_surat")
 }
 
