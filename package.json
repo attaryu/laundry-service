@@ -4,8 +4,8 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "build": "prisma generate --schema=./api/models/schema.prisma",
-    "start": "node api/index.ts",
+    "build": "tsc && prisma generate --schema=./src/models/schema.prisma",
+    "start": "node api/index.js",
     "dev": "concurrently \"tsc --watch\" \"nodemon -q dist\"",
     "generate-db": "prisma generate --schema=./src/models/schema.prisma",
     "pull-db": "prisma db pull --schema=./src/models/schema.prisma",
