@@ -3,3 +3,4 @@ api/
 
 .env
 package-lock.json
+.vercel
