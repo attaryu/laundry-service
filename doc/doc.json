@@ -1,0 +1,102 @@
+{
+    "openapi":"3.0.2",
+    "info": {
+      "title":"Laundry RESTful API",
+      "description": "Dokumentasi RESTful API web aplikasi Laundry",
+      "version":"1.0"
+    },
+    "servers": [
+      {
+        "url":"https://api.server.test/v1"
+      }
+    ],
+    "paths": {
+      "/register": {
+      },
+      "/login": {
+        "post": {
+          "tags": ["Autentikasi"],
+          "summary": "Login",
+          "description": "Rute ini untuk login ke akun admin, kasir, atau owner (jika sudah terdaftar). Jika berhasil login, akan dibuatkan 2 token baru yaitu request token dan refresh token. request token hanya bertahan selama 1 menit sedangkan refresh token bertahan hingga 1 minggu. Jika request token tidak bisa di gunakan kembali, anda bisa membuat request token baru ke rute '/login' dengan method 'GET' dengan membawa refresh token.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "username": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    }
+                  } 
+                },
+                "example": {
+                  "success": {
+                    "username": "john.doe",
+                    "password": "password_terkuat"
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/loginResponse"
+            }
+          }
+        },
+        "get": {
+          "tags": ["Autentikasi"],
+          "summary": "Mendapatkan Request Token Baru",
+          "description": "Rute ini dengan method 'GET' untuk membuat request token baru dengan refresh token",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/loginResponse"
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "securitySchemes": {
+        "JsonWebToken": {
+          "type": "http",
+          "scheme": "bearer"
+        }
+      },
+      "responses": {
+        "loginResponse": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "payload": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "request_token": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "success": {
+                  "id": "user-3h8dcz7",
+                  "request_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE1MTYyMzkwMjJ9.VtpK7PfW-VWPZK7buUtX7n6YXlos54v-xTURtXQp8rw.cThIIoDvwdueQB468K5xDc5633seEFoqwxjF_xSJyQQ"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
